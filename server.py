@@ -1,34 +1,23 @@
 import os
+import uuid
 from datetime import datetime
 from functools import wraps
+
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-import uuid
-from werkzeug.utils import secure_filename
-import uuid
-from werkzeug.utils import secure_filename
-import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-secret-before-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///anos_net.db').replace('postgres://', 'postgresql://')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
+
 UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
-UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads')
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
-UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads')
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-# Render PostgreSQL URLs may require psycopg; SQLite is used locally by default.
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -43,18 +32,25 @@ class User(UserMixin, db.Model):
     favorite_mode = db.Column(db.String(40), default='Battle Royale')
     is_admin = db.Column(db.Boolean, default=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    profile_image = db.Column(db.String(255), default='')
-    profile_image = db.Column(db.String(255), default='')
-    profile_image = db.Column(db.String(255), default='')
+    profile_image = db.Column(db.String(500), default='')
+
 
 class PublicMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     body = db.Column(db.String(500), nullable=False, default='')
-    image_path = db.Column(db.String(255), default='')
+    image_path = db.Column(db.String(500), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User')
 
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    caption = db.Column(db.String(1000), default='')
+    image_path = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User')
 
 
 class PostLike(db.Model):
@@ -62,70 +58,28 @@ class PostLike(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
+
 
 class PostComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     body = db.Column(db.String(500), nullable=False, default='')
-    image_path = db.Column(db.String(255), default='')
+    image_path = db.Column(db.String(500), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User')
 
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    caption = db.Column(db.String(1000), default='')
-    image_path = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User')
-
-class PostLike(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
-
-class PostComment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    body = db.Column(db.String(500), nullable=False, default='')
-    image_path = db.Column(db.String(255), default='')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User')
-
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    caption = db.Column(db.String(1000), default='')
-    image_path = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User')
-
-class PostLike(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
-
-class PostComment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    body = db.Column(db.String(500), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user = db.relationship('User')
 
 class PrivateMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     body = db.Column(db.String(1000), nullable=False, default='')
-    image_path = db.Column(db.String(255), default='')
+    image_path = db.Column(db.String(500), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     sender = db.relationship('User', foreign_keys=[sender_id])
     recipient = db.relationship('User', foreign_keys=[recipient_id])
+
 
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -134,6 +88,7 @@ class Team(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     owner = db.relationship('User')
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -153,26 +108,7 @@ def common_context():
     return {'site_name': 'ANOS NET'}
 
 def save_image(file):
-    if not file or not file.filename or '.' not in file.filename:
-        return ''
-    ext = file.filename.rsplit('.', 1)[1].lower()
-    if ext not in ALLOWED_IMAGES:
-        raise ValueError('Formats acceptés : PNG, JPG, WEBP ou GIF.')
-    name = secure_filename(uuid.uuid4().hex + '.' + ext)
-    file.save(os.path.join(UPLOAD_DIR, name))
-    return 'uploads/' + name
-
-def save_image(file):
-    if not file or not file.filename or '.' not in file.filename:
-        return ''
-    ext = file.filename.rsplit('.', 1)[1].lower()
-    if ext not in ALLOWED_IMAGES:
-        raise ValueError('Formats acceptés : PNG, JPG, WEBP ou GIF.')
-    name = secure_filename(uuid.uuid4().hex + '.' + ext)
-    file.save(os.path.join(UPLOAD_DIR, name))
-    return 'uploads/' + name
-
-def save_image(file):
+    """Save an uploaded image locally. Cloudinary integration requires matching template updates."""
     if not file or not file.filename or '.' not in file.filename:
         return ''
     ext = file.filename.rsplit('.', 1)[1].lower()
@@ -341,88 +277,6 @@ def feed():
           'comments': PostComment.query.filter_by(post_id=post.id).order_by(PostComment.created_at.asc()).limit(100).all()})
     return render_template('feed.html', posts=post_data)
 
-@app.route('/feed', methods=['GET', 'POST'])
-def feed():
-    if request.method == 'POST':
-        if not current_user.is_authenticated:
-            return redirect(url_for('login'))
-        action = request.form.get('action', 'post')
-        if action == 'comment':
-            post_id = request.form.get('post_id', type=int)
-            body = request.form.get('body', '').strip()
-            post = db.session.get(Post, post_id) if post_id else None
-            if post and body and len(body) <= 500:
-                db.session.add(PostComment(post_id=post.id, user_id=current_user.id, body=body)); db.session.commit()
-            else:
-                flash('Le commentaire doit contenir entre 1 et 500 caractères.', 'error')
-            return redirect(url_for('feed'))
-        if action == 'like':
-            post_id = request.form.get('post_id', type=int)
-            post = db.session.get(Post, post_id) if post_id else None
-            if post:
-                existing = PostLike.query.filter_by(post_id=post.id, user_id=current_user.id).first()
-                if existing: db.session.delete(existing)
-                else: db.session.add(PostLike(post_id=post.id, user_id=current_user.id))
-                db.session.commit()
-            return redirect(url_for('feed'))
-        caption = request.form.get('caption', '').strip()[:1000]
-        try:
-            image_path = save_image(request.files.get('image'))
-            if image_path:
-                db.session.add(Post(user_id=current_user.id, caption=caption, image_path=image_path)); db.session.commit()
-                flash('Publication ajoutée.', 'success')
-            else: flash('Choisis une photo à publier.', 'error')
-        except ValueError as exc: flash(str(exc), 'error')
-        return redirect(url_for('feed'))
-    posts = Post.query.order_by(Post.created_at.desc()).limit(100).all()
-    post_data = []
-    for post in posts:
-        post_data.append({'post': post, 'likes': PostLike.query.filter_by(post_id=post.id).count(),
-          'liked': bool(current_user.is_authenticated and PostLike.query.filter_by(post_id=post.id, user_id=current_user.id).first()),
-          'comments': PostComment.query.filter_by(post_id=post.id).order_by(PostComment.created_at.asc()).limit(100).all()})
-    return render_template('feed.html', posts=post_data)
-
-@app.route('/feed', methods=['GET', 'POST'])
-def feed():
-    if request.method == 'POST':
-        if not current_user.is_authenticated:
-            return redirect(url_for('login'))
-        action = request.form.get('action', 'post')
-        if action == 'comment':
-            post_id = request.form.get('post_id', type=int)
-            body = request.form.get('body', '').strip()
-            post = db.session.get(Post, post_id) if post_id else None
-            if post and body and len(body) <= 500:
-                db.session.add(PostComment(post_id=post.id, user_id=current_user.id, body=body)); db.session.commit()
-            else:
-                flash('Le commentaire doit contenir entre 1 et 500 caractères.', 'error')
-            return redirect(url_for('feed'))
-        if action == 'like':
-            post_id = request.form.get('post_id', type=int)
-            post = db.session.get(Post, post_id) if post_id else None
-            if post:
-                existing = PostLike.query.filter_by(post_id=post.id, user_id=current_user.id).first()
-                if existing: db.session.delete(existing)
-                else: db.session.add(PostLike(post_id=post.id, user_id=current_user.id))
-                db.session.commit()
-            return redirect(url_for('feed'))
-        caption = request.form.get('caption', '').strip()[:1000]
-        try:
-            image_path = save_image(request.files.get('image'))
-            if image_path:
-                db.session.add(Post(user_id=current_user.id, caption=caption, image_path=image_path)); db.session.commit()
-                flash('Publication ajoutée.', 'success')
-            else: flash('Choisis une photo à publier.', 'error')
-        except ValueError as exc: flash(str(exc), 'error')
-        return redirect(url_for('feed'))
-    posts = Post.query.order_by(Post.created_at.desc()).limit(100).all()
-    post_data = []
-    for post in posts:
-        post_data.append({'post': post, 'likes': PostLike.query.filter_by(post_id=post.id).count(),
-          'liked': bool(current_user.is_authenticated and PostLike.query.filter_by(post_id=post.id, user_id=current_user.id).first()),
-          'comments': PostComment.query.filter_by(post_id=post.id).order_by(PostComment.created_at.asc()).limit(100).all()})
-    return render_template('feed.html', posts=post_data)
-
 @app.route('/teams', methods=['GET', 'POST'])
 def teams():
     if request.method == 'POST':
@@ -471,28 +325,6 @@ def not_found(_):
 
 with app.app_context():
     db.create_all()
-    # Additive schema updates for existing Render databases.
-    from sqlalchemy import inspect, text
-    inspector = inspect(db.engine)
-    existing = set(inspector.get_table_names())
-    additions = {'user': {'profile_image': "VARCHAR(255) DEFAULT ''"}, 'public_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(500) NOT NULL DEFAULT ''"}, 'private_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(1000) NOT NULL DEFAULT ''"}}
-    for table, cols in additions.items():
-        if table in existing:
-            present = {c['name'] for c in inspect(db.engine).get_columns(table)}
-            for col, sql_type in cols.items():
-                if col not in present:
-                    with db.engine.begin() as conn: conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {sql_type}'))
-    # Additive schema updates for existing Render databases.
-    from sqlalchemy import inspect, text
-    inspector = inspect(db.engine)
-    existing = set(inspector.get_table_names())
-    additions = {'user': {'profile_image': "VARCHAR(255) DEFAULT ''"}, 'public_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(500) NOT NULL DEFAULT ''"}, 'private_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(1000) NOT NULL DEFAULT ''"}}
-    for table, cols in additions.items():
-        if table in existing:
-            present = {c['name'] for c in inspect(db.engine).get_columns(table)}
-            for col, sql_type in cols.items():
-                if col not in present:
-                    with db.engine.begin() as conn: conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {sql_type}'))
     # Additive schema updates for existing Render databases.
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
