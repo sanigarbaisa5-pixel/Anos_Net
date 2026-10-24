@@ -335,7 +335,15 @@ with app.app_context():
             present = {c['name'] for c in inspect(db.engine).get_columns(table)}
             for col, sql_type in cols.items():
                 if col not in present:
-                    with db.engine.begin() as conn: conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {sql_type}'))
+
+
+
+    table_sql = f'"{table}"' if table == "user" else table
+
+with db.engine.begin() as conn:
+    conn.execute(
+        text(f'ALTER TABLE {table_sql} ADD COLUMN {col} {sql_type}')
+    )
     # Optional first admin: set ADMIN_USERNAME and ADMIN_PASSWORD in Render environment.
     admin_name = os.environ.get('ADMIN_USERNAME', '').strip()
     admin_password = os.environ.get('ADMIN_PASSWORD', '')
