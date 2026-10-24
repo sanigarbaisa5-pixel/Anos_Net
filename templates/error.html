@@ -1,1 +1,0 @@
-{% extends 'base.html' %}{% block title %}Erreur {{ code }} · ANOS NET{% endblock %}{% block content %}<section class="error-page"><span class="eyebrow">SYSTEM MESSAGE</span><h1>{{ code }} <em>ERROR.</em></h1><p>{{ message }}</p><a class="btn primary" href="{{ url_for('home') }}">Retour à l'accueil ↗</a></section>{% endblock %}
