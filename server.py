@@ -32,8 +32,6 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     profile_image = db.Column(db.String(255), default='')
-    profile_image = db.Column(db.String(255), default='')
-    profile_image = db.Column(db.String(255), default='')
 
 class PublicMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -345,10 +343,6 @@ def feed():
           'comments': PostComment.query.filter_by(post_id=post.id).order_by(PostComment.created_at.asc()).limit(100).all()})
     return render_template('feed.html', posts=post_data)
 
-@app.route('/feed', methods=['GET', 'POST'])
-
-@app.route('/feed', methods=['GET', 'POST'])
-
 @app.route('/teams', methods=['GET', 'POST'])
 def teams():
     if request.method == 'POST':
@@ -401,7 +395,15 @@ with app.app_context():
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
     existing = set(inspector.get_table_names())
-    additions = {'user': {'profile_image': "VARCHAR(255) DEFAULT ''"}, 'public_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(500) NOT NULL DEFAULT ''"}, 'private_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(1000) NOT NULL DEFAULT ''"}}
+    additions = {
+        'user': {'profile_image': "VARCHAR(255) DEFAULT ''"},
+        'public_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(500) NOT NULL DEFAULT ''"},
+        'private_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(1000) NOT NULL DEFAULT ''"},
+        # Existing Render databases may predate photo posts/comments.
+        # Defaults preserve existing rows when adding non-nullable columns.
+        'post': {'image_path': "VARCHAR(255) NOT NULL DEFAULT ''"},
+        'post_comment': {'image_path': "VARCHAR(255) DEFAULT ''"},
+    }
     for table, cols in additions.items():
         if table in existing:
             present = {c['name'] for c in inspect(db.engine).get_columns(table)}
