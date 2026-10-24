@@ -332,18 +332,21 @@ with app.app_context():
     additions = {'user': {'profile_image': "VARCHAR(255) DEFAULT ''"}, 'public_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(500) NOT NULL DEFAULT ''"}, 'private_message': {'image_path': "VARCHAR(255) DEFAULT ''", 'body': "VARCHAR(1000) NOT NULL DEFAULT ''"}}
     for table, cols in additions.items():
         if table in existing:
-            present = {c['name'] for c in inspect(db.engine).get_columns(table)}
+            present = {
+                column['name']
+                for column in inspect(db.engine).get_columns(table)
+            }
             for col, sql_type in cols.items():
                 if col not in present:
-
-
-
-    table_sql = f'"{table}"' if table == "user" else table
-
-with db.engine.begin() as conn:
-    conn.execute(
-        text(f'ALTER TABLE {table_sql} ADD COLUMN {col} {sql_type}')
-    )
+                    # Quote table names so PostgreSQL's reserved word USER is safe.
+                    table_sql = f'"{table}"'
+                    with db.engine.begin() as conn:
+                        conn.execute(
+                            text(
+                                f'ALTER TABLE {table_sql} '
+                                f'ADD COLUMN {col} {sql_type}'
+                            )
+                        )
     # Optional first admin: set ADMIN_USERNAME and ADMIN_PASSWORD in Render environment.
     admin_name = os.environ.get('ADMIN_USERNAME', '').strip()
     admin_password = os.environ.get('ADMIN_PASSWORD', '')
